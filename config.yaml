@@ -1,0 +1,49 @@
+---
+led_count: 50
+brightness: 200
+metar_refresh_rate_s: 60
+led_refresh_rate_ms: 200
+leds:
+  2: KSTS
+  3: KO69
+  4: KDVO
+  5: KAPC
+  6: KCCR
+  7: KSUU
+  8: KO88
+  9: KVCB
+  10: KDWA
+  11: KEDU
+  12: KSAC
+  13: KSMF
+  14: KMHR
+  15: KMCC
+  16: KLHM
+  17: KMYV
+  18: KBAB
+  19: KAUN
+  20: KPVF
+  21: KJAQ
+  22: KCPU
+  23: KO22
+  25: KMER
+  26: KMCE
+  28: KMOD
+  29: KSCK
+  30: KTCY
+  31: KC83
+  32: KLVK
+  33: KHWD
+  34: KOAK
+  35: KSFO
+  36: KHAF
+  37: KSQL
+  38: KPAO
+  39: KSJC
+  40: KRHV
+  41: KE16
+  42: KTVL
+  44: KTRK
+  46: KBLU
+  47: KGOO
+  49: KOVE

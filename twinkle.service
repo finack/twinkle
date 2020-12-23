@@ -1,0 +1,11 @@
+[Unit]
+Description=Metar Map Server
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5s
+ExecStart=/home/twinkle/twinkle /home/twinkle/config.yaml
+
+[Install]
+WantedBy=multi-user.target
