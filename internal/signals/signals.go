@@ -1,11 +1,13 @@
 package signals
 
 import (
-	"log"
+  "fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+  "github.com/rs/zerolog/log"
 )
 
 func CatchSignals(stopMetarClient chan bool, stopLedUpdate chan bool, stopApplication chan bool) {
@@ -13,8 +15,8 @@ func CatchSignals(stopMetarClient chan bool, stopLedUpdate chan bool, stopApplic
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		<-sigs
-		log.Println("Caught SIGINIT/SIGTERM. Gracefully exiting...")
+    s:= <-sigs
+		log.Info().Str("signal", fmt.Sprintf("%v", s)).Msg("Shutting down Twinkle!")
 		stopLedUpdate <- true
 		stopMetarClient <- true
 		time.Sleep(time.Millisecond * 500)

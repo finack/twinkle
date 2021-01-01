@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"image/color"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/finack/twinkle/internal/config"
 	"github.com/finack/twinkle/internal/display"
+
 	"github.com/gocarina/gocsv"
 	"golang.org/x/image/colornames"
+  "github.com/rs/zerolog/log"
 )
 
 // https://www.aviationweather.gov/dataserver/fields?datatype=metar
@@ -73,17 +74,21 @@ func FetchRoutine(c config.Config, leds chan display.Pixel) chan bool {
 }
 
 func doFetchRoutine(c config.Config, leds chan display.Pixel) {
-	log.Println("Fetching metars")
+
 	metars, err := getMetars(c.Leds)
 	if err != nil {
-		log.Printf("MAIN:Could not fetch metars: %v", err)
+		log.Error().Err(err).Msg("Could not fetch metars, skipping")
+    return
 	}
+
+	log.Info().Int("count", len(*metars)).Msg("Fetched Metars")
 
 	for _, metar := range *metars {
 		var ledNum int = -1
 		ledNum = c.Stations[metar.StationID]
 		if ledNum < 0 {
-			log.Printf("Could not find station %v", metar.StationID)
+      log.Warn().Str("stationID", metar.StationID).Msg("Results included station not found in config")
+      continue
 		}
 
 		var color color.RGBA
@@ -100,7 +105,7 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 		case "":
 			color = colornames.Grey
 		default:
-			log.Printf("Unknown flightCategory %v for %v", metar.FlightCategory, metar)
+      log.Warn().Str("flightCategory", metar.FlightCategory).Msg("Unknown flightCategory")
 			color = colornames.Antiquewhite
 		}
 		leds <- display.Pixel{Num: ledNum, Color: color}
@@ -135,7 +140,8 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 
 	err = gocsv.UnmarshalString(csvData.String(), &stations)
 	if err != nil {
-		log.Fatalf("Could not unmarshal CSV: %v", err)
+		log.Error().Err(err).Msg("Could not unmarshal CSV")
+    return nil, err
 	}
 
 	return &stations, nil
@@ -155,19 +161,25 @@ func fetchMetars(s map[int]string) ([]byte, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatalf("Could not fetch %v : %v", url, err)
+    log.Error().Err(err).Str("url", url).Msg("Unable to fetch Metar")
+    return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err := fmt.Sprintf("[fetchMetar][ERROR] HTTP expected %v got %v", http.StatusOK, resp.StatusCode)
-		log.Printf(err)
-		return nil, errors.New(err)
+		err := errors.New(fmt.Sprintf("HTTP expected %v got %v", http.StatusOK, resp.StatusCode))
+    log.
+      Error().
+      Err(err).
+      Int("httpstatus", resp.StatusCode).
+      Int("expectedHttpStatus", http.StatusOK).
+      Msg("Received an unexpected HTTP Status")
+		return nil, err
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("[fetchMetar][ERROR] Read body: %v", err)
+		log.Error().Err(err).Msg("Unable to parse HTTP Body")
 		return nil, err
 	}
 

@@ -3,11 +3,11 @@ package display
 import (
 	"errors"
 	"image/color"
-	"log"
 	"time"
 
 	"github.com/finack/twinkle/internal/config"
 	ws2811 "github.com/rpi-ws281x/rpi-ws281x-go"
+  "github.com/rs/zerolog/log"
 )
 
 type wsEngine interface {
@@ -36,12 +36,20 @@ func New(brightness int, ledcount int) (*Leds, error) {
 
 	dev, err := ws2811.MakeWS2811(&opt)
 	if err != nil {
-		log.Fatalf("Could not configure LEDS: %v", err)
+		log.
+      Fatal().
+      Err(err).
+      Caller().
+      Msg("Could not configure LEDS")
 	}
 
 	err = dev.Init()
 	if err != nil {
-		log.Fatalf("Could not init LEDS: %v", err)
+		log.
+      Fatal().
+      Err(err).
+      Caller().
+		  Msg("Could not init LEDS")
 	}
 
 	leds := &Leds{Ws: dev}
@@ -63,7 +71,11 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 
 		leds, err := New(c.Brightness, c.LedCount)
 		if err != nil {
-			log.Fatalf("Could not start connection to LEDS %v", err)
+			log.
+        Fatal().
+        Err(err).
+        Caller().
+        Msg("Could not start connection to LEDS")
 		}
 
 		ledRefreshRate := time.NewTicker(time.Duration(c.LedRefreshRateMS) * time.Millisecond)
@@ -84,27 +96,35 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 				for n, c := range display {
 					err := leds.Display(n, c)
 					if err != nil {
-						log.Printf("[WARN] Issue setting pix %v : %v", n, err)
+						log.Error().Caller().Msgf("Issue setting pix %v : %v", n, err)
+            continue
 					}
 
 					err = leds.Ws.Render()
 					if err != nil {
-						log.Printf("[WARN] Issue rendering : %v", err)
+						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
+            continue
 					}
 				}
 
 			case <-ledRefreshRate.C:
+        if len(buffer) <= 0 {
+          continue
+        }
+
+        log.Debug().Int("ledCount", len(buffer)).Msg("Updating Display")
 				for _, p := range buffer {
 					err := leds.Display(p.Num, p.Color)
 					if err != nil {
-						log.Printf("[WARN] Issue setting pix %v : %v", p.Num, err)
+						log.Error().Err(err).Caller().Int("pixel", p.Num).Msg("Issue setting pixel")
+            continue
 					}
 
 					display[p.Num] = p.Color
 
 					err = leds.Ws.Render()
 					if err != nil {
-						log.Printf("[WARN] Issue rendering : %v", err)
+						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
 					}
 				}
 

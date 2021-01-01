@@ -2,10 +2,9 @@ package config
 
 import (
 	"io/ioutil"
-	"log"
-	"os"
 	"strings"
 
+  "github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -18,18 +17,27 @@ type Config struct {
 	LedRefreshRateMS  int `yaml:"led_refresh_rate_ms,omitempty"`  // milliseconds
 }
 
-func GetConfig() Config {
+func GetConfig(file *string) Config {
 
 	c := Config{}
 
-	data, err := ioutil.ReadFile(os.Args[1])
+	data, err := ioutil.ReadFile(*file)
 	if err != nil {
-		log.Fatalf("Could not read config file: %v", err)
+		log.
+      Fatal().
+      Err(err).
+      Caller().
+      Str("configFile", *file).
+      Msg("Could not read config file")
 	}
 
 	err = yaml.Unmarshal([]byte(data), &c)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+    log.
+      Fatal().
+      Err(err).
+      Caller().
+      Msg("Cound not unmarshal configuration file")
 	}
 
 	c.Stations = reverseLeds(c.Leds)
