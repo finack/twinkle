@@ -31,4 +31,4 @@ setup: build
 	ln -s config.yaml twinkle/config.yaml
 	ln -s twinkle.service twinkle/twinkle.service
 	sudo mv twinkle /home
-	ln -s /home/twinkle/twinkle.service /lib/systemd/system/twinkle.servicc
+	ln -s /home/twinkle/twinkle.service /lib/systemd/system/twinkle.service

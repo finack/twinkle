@@ -21,7 +21,7 @@ func main() {
 
   flag.Parse()
 
-	c := config.GetConfig(configFile)
+  c := config.GetConfig(configFile)
   log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
   if *debug {

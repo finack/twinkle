@@ -94,14 +94,9 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 				}
 			case <-refresh:
 				for n, c := range display {
-					err := leds.Display(n, c)
-					if err != nil {
-						log.Error().Caller().Msgf("Issue setting pix %v : %v", n, err)
-            continue
-					}
+					leds.Display(n, c)
 
-					err = leds.Ws.Render()
-					if err != nil {
+					if err := leds.Ws.Render(); err != nil {
 						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
             continue
 					}
@@ -114,12 +109,7 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 
         log.Debug().Int("ledCount", len(buffer)).Msg("Updating Display")
 				for _, p := range buffer {
-					err := leds.Display(p.Num, p.Color)
-					if err != nil {
-						log.Error().Err(err).Caller().Int("pixel", p.Num).Msg("Issue setting pixel")
-            continue
-					}
-
+					leds.Display(p.Num, p.Color)
 					display[p.Num] = p.Color
 
 					err = leds.Ws.Render()
@@ -146,15 +136,8 @@ func (l *Leds) Clear() error {
 	return nil
 }
 
-func (l *Leds) Display(num int, c color.RGBA) error {
-
+func (l *Leds) Display(num int, c color.RGBA) {
 	l.Ws.Leds(0)[num] = ParseRGBAtoUint32(c)
-
-	if err := l.Ws.Render(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func ParseRGBAtoUint32(c color.RGBA) uint32 {

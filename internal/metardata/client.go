@@ -13,8 +13,8 @@ import (
 	"github.com/finack/twinkle/internal/display"
 
 	"github.com/gocarina/gocsv"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/image/colornames"
-  "github.com/rs/zerolog/log"
 )
 
 // https://www.aviationweather.gov/dataserver/fields?datatype=metar
