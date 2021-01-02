@@ -4,6 +4,7 @@ brightness: 200
 metar_refresh_rate_s: 60
 led_refresh_rate_ms: 200
 leds:
+  0: KUKI
   2: KSTS
   3: KO69
   4: KDVO
