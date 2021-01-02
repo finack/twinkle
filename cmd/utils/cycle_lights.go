@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"flag"
-	"sort"
 
 	"github.com/finack/twinkle/internal/config"
 	"github.com/finack/twinkle/internal/display"
@@ -27,18 +26,10 @@ func main() {
 		log.Fatal().Err(err).Caller().Msg("Could not setup LEDS")
 	}
 
-  keys := make([]int, len(c.Leds))
-	i := 0
-	for k := range c.Leds {
-			keys[i] = k
-			i++
-	}
-	sort.Ints(keys)
-
 	log.Info().Msg("Hit enter to continue")
-	for _, k := range keys {
-		num := k
-		station := c.Leds[k]
+	for i := 0; i < c.LedCount; i++ {
+		num := i
+		station := c.Leds[i]
 		log.Info().Int("ledNum", num).Str("station", station).Msg("Displaying")
 		leds.Clear()
 		leds.Display(num, colornames.Crimson)
