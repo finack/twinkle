@@ -3,6 +3,9 @@ led_count: 50
 brightness: 200
 metar_refresh_rate_s: 60
 led_refresh_rate_ms: 200
+latitude: 37.9884
+longitude: -122.0578
+locale: America/Los_Angeles
 leds:
   0: KUKI
   2: KSTS
