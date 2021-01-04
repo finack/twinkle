@@ -7,7 +7,7 @@ import (
 
 	"github.com/finack/twinkle/internal/config"
 	ws2811 "github.com/rpi-ws281x/rpi-ws281x-go"
-  "github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/log"
 )
 
 type wsEngine interface {
@@ -37,19 +37,19 @@ func New(brightness int, ledcount int) (*Leds, error) {
 	dev, err := ws2811.MakeWS2811(&opt)
 	if err != nil {
 		log.
-      Fatal().
-      Err(err).
-      Caller().
-      Msg("Could not configure LEDS")
+			Fatal().
+			Err(err).
+			Caller().
+			Msg("Could not configure LEDS")
 	}
 
 	err = dev.Init()
 	if err != nil {
 		log.
-      Fatal().
-      Err(err).
-      Caller().
-		  Msg("Could not init LEDS")
+			Fatal().
+			Err(err).
+			Caller().
+			Msg("Could not init LEDS")
 	}
 
 	leds := &Leds{Ws: dev}
@@ -59,9 +59,10 @@ func New(brightness int, ledcount int) (*Leds, error) {
 	return leds, nil
 }
 
-func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
+func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel, chan int) {
 	done := make(chan bool)
 	refresh := make(chan bool)
+	setBrightness := make(chan int)
 
 	ledChannel := make(chan Pixel)
 
@@ -72,10 +73,10 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 		leds, err := New(c.Brightness, c.LedCount)
 		if err != nil {
 			log.
-        Fatal().
-        Err(err).
-        Caller().
-        Msg("Could not start connection to LEDS")
+				Fatal().
+				Err(err).
+				Caller().
+				Msg("Could not start connection to LEDS")
 		}
 
 		ledRefreshRate := time.NewTicker(time.Duration(c.LedRefreshRateMS) * time.Millisecond)
@@ -98,16 +99,17 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 
 					if err := leds.Ws.Render(); err != nil {
 						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
-            continue
+						continue
 					}
 				}
-
+			case brightness := <-setBrightness:
+				leds.Ws.SetBrightness(0, brightness)
 			case <-ledRefreshRate.C:
-        if len(buffer) <= 0 {
-          continue
-        }
+				if len(buffer) <= 0 {
+					continue
+				}
 
-        log.Debug().Int("ledCount", len(buffer)).Msg("Updating Display")
+				log.Debug().Int("ledCount", len(buffer)).Msg("Updating Display")
 				for _, p := range buffer {
 					leds.Display(p.Num, p.Color)
 					display[p.Num] = p.Color
@@ -123,7 +125,7 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 		}
 	}()
 
-	return done, refresh, ledChannel
+	return done, refresh, ledChannel, setBrightness
 }
 
 func (l *Leds) Clear() error {

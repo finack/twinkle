@@ -4,17 +4,20 @@ import (
 	"io/ioutil"
 	"strings"
 
-  "github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
 	Leds              map[int]string `yaml:"leds,omitempty"`
 	Stations          map[string]int
-	LedCount          int `yaml:"led_count,omitempty"`
-	Brightness        int `yaml:"brightness,omitempty"`
-	MetarRefreshRateS int `yaml:"metar_refresh_rate_s,omitempty"` // seconds
-	LedRefreshRateMS  int `yaml:"led_refresh_rate_ms,omitempty"`  // milliseconds
+	LedCount          int     `yaml:"led_count,omitempty"`
+	Brightness        int     `yaml:"brightness,omitempty"`
+	MetarRefreshRateS int     `yaml:"metar_refresh_rate_s,omitempty"` // seconds
+	LedRefreshRateMS  int     `yaml:"led_refresh_rate_ms,omitempty"`  // milliseconds
+	Latitude          float64 `yaml:"latitude,omitempty"`
+	Longitude         float64 `yaml:"longitude,omitempty"`
+	Locale            string  `yaml:"locale,omitempty"`
 }
 
 func GetConfig(file *string) Config {
@@ -24,20 +27,20 @@ func GetConfig(file *string) Config {
 	data, err := ioutil.ReadFile(*file)
 	if err != nil {
 		log.
-      Fatal().
-      Err(err).
-      Caller().
-      Str("configFile", *file).
-      Msg("Could not read config file")
+			Fatal().
+			Err(err).
+			Caller().
+			Str("configFile", *file).
+			Msg("Could not read config file")
 	}
 
 	err = yaml.Unmarshal([]byte(data), &c)
 	if err != nil {
-    log.
-      Fatal().
-      Err(err).
-      Caller().
-      Msg("Cound not unmarshal configuration file")
+		log.
+			Fatal().
+			Err(err).
+			Caller().
+			Msg("Cound not unmarshal configuration file")
 	}
 
 	c.Stations = reverseLeds(c.Leds)
