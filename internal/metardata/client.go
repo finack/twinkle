@@ -27,8 +27,8 @@ type Metar struct {
 	TempC                     float32 `csv:"temp_c"`                        // Air temperature
 	DewpointC                 float32 `csv:"dewpoint_c"`                    // Dewpoint temperature
 	WindDirDegrees            int     `csv:"wind_dir_degrees"`              // Direction from which the wind is blowing.  0 degrees=variable wind direction.
-	windSpeedKt               int     `csv:"wind_speed_kt"`                 // Wind speed; 0 degree wdir and 0 wspd = calm winds
-	windGustKt                int     `csv:"wind_gust_kt"`                  // Wind gust
+	windSpeedKt               string     `csv:"wind_speed_kt"`                 // Wind speed; 0 degree wdir and 0 wspd = calm winds
+	windGustKt                string     `csv:"wind_gust_kt"`                  // Wind gust
 	VisibilityStatuteMi       float32 `csv:"visibility_statute_mi"`         // Horizontal visibility
 	AltimInHg                 float32 `csv:"altim_in_hg"`                   // Altimeter
 	SeaLevelPressureMb        float32 `csv:"sea_level_pressure_mb"`         // Sea-level pressure
@@ -121,6 +121,7 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 	}
 	lines := strings.Split(string(data), "\n")
 	var csvData strings.Builder
+	
 
 	foundHeader := false
 	for _, line := range lines {
@@ -141,6 +142,7 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 	err = gocsv.UnmarshalString(csvData.String(), &stations)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not unmarshal CSV")
+		log.Error().Str("body", csvData.String()).Msg("CSV Data")
     return nil, err
 	}
 
@@ -154,7 +156,8 @@ func fetchMetars(s map[int]string) ([]byte, error) {
 		stations = append(stations, station)
 	}
 
-	url := "https://www.aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=csv"
+	url := "https://www.aviationweather.gov/api/data/dataserver?dataSource=metars&requestType=retrieve&format=csv"
+	// url := "https://www.aviationweather.gov/api/data/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=csv"
 	url += "&mostRecentForEachStation=true&hoursBeforeNow=4"
 	url += "&stationString="
 	url += strings.Join(stations, ",")
@@ -182,6 +185,7 @@ func fetchMetars(s map[int]string) ([]byte, error) {
 		log.Error().Err(err).Msg("Unable to parse HTTP Body")
 		return nil, err
 	}
+
 
 	return data, nil
 }
