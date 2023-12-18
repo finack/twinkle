@@ -27,14 +27,28 @@ type Metar struct {
 	TempC                     float32 `csv:"temp_c"`                        // Air temperature
 	DewpointC                 float32 `csv:"dewpoint_c"`                    // Dewpoint temperature
 	WindDirDegrees            int     `csv:"wind_dir_degrees"`              // Direction from which the wind is blowing.  0 degrees=variable wind direction.
-	windSpeedKt               string     `csv:"wind_speed_kt"`                 // Wind speed; 0 degree wdir and 0 wspd = calm winds
-	windGustKt                string     `csv:"wind_gust_kt"`                  // Wind gust
+	windSpeedKt               string  `csv:"wind_speed_kt"`                 // Wind speed; 0 degree wdir and 0 wspd = calm winds
+	windGustKt                string  `csv:"wind_gust_kt"`                  // Wind gust
 	VisibilityStatuteMi       float32 `csv:"visibility_statute_mi"`         // Horizontal visibility
 	AltimInHg                 float32 `csv:"altim_in_hg"`                   // Altimeter
 	SeaLevelPressureMb        float32 `csv:"sea_level_pressure_mb"`         // Sea-level pressure
-	QualityControlFlags       string  `csv:"quality_control_flags"`         // Quality control flags (see below) provide useful information about the METAR station(s) that provide the data.
+	Corrected                 string  `csv:"corrected"`
+	Auto                      string  `csv:"auto"`
+	AutoStation               string  `csv:"auto_station"`
+	MaintenanceIndicatorOn    string  `csv:"maintenance_indicator_on"`
+	NoSignal                  string  `csv:"no_signal"`
+	LightningSensorOff        string  `csv:"lightning_sensor_off"`
+	FreezingRainSensorOff     string  `csv:"freezing_rain_sensor_off"`
+	PresentWeatherSensorOff   string  `csv:"present_weather_sensor_off"`
 	WxString                  string  `csv:"wx_string"`                     // wx_string descriptions
-	SkyCondition              string  `csv:"sky_condition"`                 // sky_cover - up to four levels of sky cover and base can be reported under the sky_conditions field; OVX present when vert_vis_ft is reported.  Allowed values: SKC|CLR|CAVOK|FEW|SCT|BKN|OVC|OVX"
+	SkyCover                  string  `csv:"sky_cover"`
+	CloudBaseftAGL            float32 `csv:"cloud_base_ft_agl"`
+	SkyCover2                 string  `csv:"sky_cover"`
+	CloudBaseftAGL2           float32 `csv:"cloud_base_ft_agl"`
+	SkyCover3                 string  `csv:"sky_cover"`
+	CloudBaseftAGL3           float32 `csv:"cloud_base_ft_agl"`
+	SkyCover4                 string  `csv:"sky_cover"`
+	CloudBaseftAGL4           float32 `csv:"cloud_base_ft_agl"`
 	FlightCategory            string  `csv:"flight_category"`               // Flight category of this METAR. Values: VFR|MVFR|IFR|LIFR See http://www.aviationweather.gov/metar/help?page=plot#fltcat"
 	ThreeHrPressureTendencyMb float32 `csv:"three_hr_pressure_tendency_mb"` // Pressure change in the past 3 hours
 	MaxTC                     float32 `csv:"maxT_c"`                        // Maximum air temperature from the past 6 hours
@@ -87,8 +101,8 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 		var ledNum int = -1
 		ledNum = c.Stations[metar.StationID]
 		if ledNum < 0 {
-      log.Warn().Str("stationID", metar.StationID).Msg("Results included station not found in config")
-      continue
+			log.Warn().Str("stationID", metar.StationID).Msg("Results included station not found in config")
+			continue
 		}
 
 		var color color.RGBA
@@ -105,7 +119,7 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 		case "":
 			color = colornames.Grey
 		default:
-      log.Warn().Str("flightCategory", metar.FlightCategory).Msg("Unknown flightCategory")
+			log.Warn().Str("flightCategory", metar.FlightCategory).Msg("Unknown flightCategory")
 			color = colornames.Antiquewhite
 		}
 		leds <- display.Pixel{Num: ledNum, Color: color}
@@ -121,7 +135,6 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 	}
 	lines := strings.Split(string(data), "\n")
 	var csvData strings.Builder
-	
 
 	foundHeader := false
 	for _, line := range lines {
@@ -157,26 +170,25 @@ func fetchMetars(s map[int]string) ([]byte, error) {
 	}
 
 	url := "https://www.aviationweather.gov/api/data/dataserver?dataSource=metars&requestType=retrieve&format=csv"
-	// url := "https://www.aviationweather.gov/api/data/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=csv"
 	url += "&mostRecentForEachStation=true&hoursBeforeNow=4"
 	url += "&stationString="
 	url += strings.Join(stations, ",")
 
 	resp, err := http.Get(url)
 	if err != nil {
-    log.Error().Err(err).Str("url", url).Msg("Unable to fetch Metar")
-    return nil, err
+		log.Error().Err(err).Str("url", url).Msg("Unable to fetch Metar")
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		err := errors.New(fmt.Sprintf("HTTP expected %v got %v", http.StatusOK, resp.StatusCode))
-    log.
-      Error().
-      Err(err).
-      Int("httpstatus", resp.StatusCode).
-      Int("expectedHttpStatus", http.StatusOK).
-      Msg("Received an unexpected HTTP Status")
+		log.
+			Error().
+			Err(err).
+			Int("httpstatus", resp.StatusCode).
+			Int("expectedHttpStatus", http.StatusOK).
+			Msg("Received an unexpected HTTP Status")
 		return nil, err
 	}
 
