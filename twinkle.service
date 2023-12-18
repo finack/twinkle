@@ -5,7 +5,7 @@ Description=Metar Map Server
 Type=simple
 Restart=always
 RestartSec=5s
-ExecStart=/home/pi/src/finack/twinkle/build/twinkle --config /home/pi/src/finack/twinkle/config.yaml --debug
+ExecStart=/home/twinkle/twinkle --config /home/twinkle/config.yaml --debug
 
 [Install]
 WantedBy=multi-user.target

@@ -33,6 +33,7 @@ func New(brightness int, ledcount int) (*Leds, error) {
 	opt.Channels[0].Brightness = brightness
 	opt.Channels[0].LedCount = ledcount
 	opt.Channels[0].StripeType = ws2811.WS2811StripRGB
+	opt.Channels[0].GpioPin = 12
 
 	dev, err := ws2811.MakeWS2811(&opt)
 	if err != nil {

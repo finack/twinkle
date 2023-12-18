@@ -38,8 +38,8 @@ disable:
 # Not tested, more documentation
 setup: build
 	mkdir twinkle
-	ln -s build/twinkle twinkle/twinkle
-	ln -s config.yaml twinkle/config.yaml
-	ln -s twinkle.service twinkle/twinkle.service
+	cp build/twinkle twinkle/twinkle
+	cp config.yaml twinkle/config.yaml
+	cp twinkle.service twinkle/twinkle.service
 	sudo mv twinkle /home
-	ln -s /home/twinkle/twinkle.service /lib/systemd/system/twinkle.service
+	sudo ln -s /home/twinkle/twinkle.service /lib/systemd/system/twinkle.service
