@@ -29,9 +29,9 @@ type Metar struct {
 	WindDirDegrees            int     `csv:"wind_dir_degrees"`              // Direction from which the wind is blowing.  0 degrees=variable wind direction.
 	windSpeedKt               string  `csv:"wind_speed_kt"`                 // Wind speed; 0 degree wdir and 0 wspd = calm winds
 	windGustKt                string  `csv:"wind_gust_kt"`                  // Wind gust
-	VisibilityStatuteMi       float32 `csv:"visibility_statute_mi"`         // Horizontal visibility
-	AltimInHg                 float32 `csv:"altim_in_hg"`                   // Altimeter
-	SeaLevelPressureMb        float32 `csv:"sea_level_pressure_mb"`         // Sea-level pressure
+	VisibilityStatuteMi       string  `csv:"visibility_statute_mi"`         // Horizontal visibility
+	AltimInHg                 string  `csv:"altim_in_hg"`                   // Altimeter
+	SeaLevelPressureMb        string  `csv:"sea_level_pressure_mb"`         // Sea-level pressure
 	Corrected                 string  `csv:"corrected"`
 	Auto                      string  `csv:"auto"`
 	AutoStation               string  `csv:"auto_station"`
