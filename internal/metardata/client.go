@@ -155,6 +155,16 @@ func windAdjustedColor(base, windy color.RGBA, effectiveWindKt, lowKt, highKt fl
 	return blendColors(windy, color.RGBA{R: 255, G: 255, B: 255, A: 255}, whiteFraction)
 }
 
+// FlightColor returns the LED color for a flight category at the given effective wind speed.
+// It is the single entry point for combining flight category and wind into a display color.
+func FlightColor(category string, effectiveWindKt, lowKt, highKt float64) color.RGBA {
+	return windAdjustedColor(
+		flightCategoryToColor(category),
+		windyColorFor(category),
+		effectiveWindKt, lowKt, highKt,
+	)
+}
+
 func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 	metars, err := getMetars(c.Leds)
 	if err != nil {
