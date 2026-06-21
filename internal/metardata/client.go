@@ -97,7 +97,7 @@ func flightCategoryToColor(category string) color.RGBA {
 		return colornames.Red
 	case "LIFR":
 		return colornames.Mediumvioletred
-	case "":
+	case "", "NULL":
 		return colornames.Grey
 	default:
 		log.Warn().Str("flightCategory", category).Msg("Unknown flightCategory")
