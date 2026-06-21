@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -19,19 +19,19 @@ import (
 
 // https://www.aviationweather.gov/dataserver/fields?datatype=metar
 type Metar struct {
-	RawText                   string `csv:"raw_text"`                      // The raw METAR
-	StationID                 string `csv:"station_id"`                    // Station identifier; Always a four character alphanumeric( A-Z, 0-9)
-	ObservationTime           string `csv:"observation_time"`              // Time( in ISO8601 date/time format) this METAR was observed.
-	Latitude                  string `csv:"latitude"`                      // The latitude (in decimal degrees )of the station that reported this METAR
-	Longitude                 string `csv:"longitude"`                     // The longitude (in decimal degrees) of the station that reported this METAR
-	TempC                     string `csv:"temp_c"`                        // Air temperature
-	DewpointC                 string `csv:"dewpoint_c"`                    // Dewpoint temperature
-	WindDirDegrees            string `csv:"wind_dir_degrees"`              // Direction from which the wind is blowing.  0 degrees=variable wind direction.
-	windSpeedKt               string `csv:"wind_speed_kt"`                 // Wind speed; 0 degree wdir and 0 wspd = calm winds
-	windGustKt                string `csv:"wind_gust_kt"`                  // Wind gust
-	VisibilityStatuteMi       string `csv:"visibility_statute_mi"`         // Horizontal visibility
-	AltimInHg                 string `csv:"altim_in_hg"`                   // Altimeter
-	SeaLevelPressureMb        string `csv:"sea_level_pressure_mb"`         // Sea-level pressure
+	RawText                   string `csv:"raw_text"`              // The raw METAR
+	StationID                 string `csv:"station_id"`            // Station identifier; Always a four character alphanumeric( A-Z, 0-9)
+	ObservationTime           string `csv:"observation_time"`      // Time( in ISO8601 date/time format) this METAR was observed.
+	Latitude                  string `csv:"latitude"`              // The latitude (in decimal degrees )of the station that reported this METAR
+	Longitude                 string `csv:"longitude"`             // The longitude (in decimal degrees) of the station that reported this METAR
+	TempC                     string `csv:"temp_c"`                // Air temperature
+	DewpointC                 string `csv:"dewpoint_c"`            // Dewpoint temperature
+	WindDirDegrees            string `csv:"wind_dir_degrees"`      // Direction from which the wind is blowing.  0 degrees=variable wind direction.
+	windSpeedKt               string `csv:"wind_speed_kt"`         // Wind speed; 0 degree wdir and 0 wspd = calm winds
+	windGustKt                string `csv:"wind_gust_kt"`          // Wind gust
+	VisibilityStatuteMi       string `csv:"visibility_statute_mi"` // Horizontal visibility
+	AltimInHg                 string `csv:"altim_in_hg"`           // Altimeter
+	SeaLevelPressureMb        string `csv:"sea_level_pressure_mb"` // Sea-level pressure
 	Corrected                 string `csv:"corrected"`
 	Auto                      string `csv:"auto"`
 	AutoStation               string `csv:"auto_station"`
@@ -40,7 +40,7 @@ type Metar struct {
 	LightningSensorOff        string `csv:"lightning_sensor_off"`
 	FreezingRainSensorOff     string `csv:"freezing_rain_sensor_off"`
 	PresentWeatherSensorOff   string `csv:"present_weather_sensor_off"`
-	WxString                  string `csv:"wx_string"`                     // wx_string descriptions
+	WxString                  string `csv:"wx_string"` // wx_string descriptions
 	SkyCover                  string `csv:"sky_cover"`
 	CloudBaseftAGL            string `csv:"cloud_base_ft_agl"`
 	SkyCover2                 string `csv:"sky_cover"`
@@ -66,7 +66,6 @@ type Metar struct {
 }
 
 func FetchRoutine(c config.Config, leds chan display.Pixel) chan bool {
-
 	done := make(chan bool)
 
 	go func() {
@@ -88,11 +87,10 @@ func FetchRoutine(c config.Config, leds chan display.Pixel) chan bool {
 }
 
 func doFetchRoutine(c config.Config, leds chan display.Pixel) {
-
 	metars, err := getMetars(c.Leds)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not fetch metars, skipping")
-    return
+		return
 	}
 
 	log.Info().Int("count", len(*metars)).Msg("Fetched Metars")
@@ -128,7 +126,6 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 }
 
 func getMetars(s map[int]string) (*[]Metar, error) {
-
 	data, err := fetchMetars(s)
 	if err != nil {
 		return nil, err
@@ -156,14 +153,13 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 	if err != nil {
 		log.Error().Err(err).Msg("Could not unmarshal CSV")
 		log.Error().Str("body", csvData.String()).Msg("CSV Data")
-    return nil, err
+		return nil, err
 	}
 
 	return &stations, nil
 }
 
 func fetchMetars(s map[int]string) ([]byte, error) {
-
 	stations := make([]string, 0)
 	for _, station := range s {
 		stations = append(stations, station)
@@ -192,12 +188,11 @@ func fetchMetars(s map[int]string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to parse HTTP Body")
 		return nil, err
 	}
-
 
 	return data, nil
 }

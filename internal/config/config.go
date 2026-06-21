@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -21,10 +21,9 @@ type Config struct {
 }
 
 func GetConfig(file *string) Config {
-
 	c := Config{}
 
-	data, err := ioutil.ReadFile(*file)
+	data, err := os.ReadFile(*file)
 	if err != nil {
 		log.
 			Fatal().

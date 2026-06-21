@@ -1,6 +1,6 @@
 .PHONY: build clean start stop enable disable run setup
 
-BUILD_PLATFORM=v6
+BUILD_PLATFORM=arm32v6
 
 build:
 	go build -o ./build/twinkle ./cmd/server/main.go
