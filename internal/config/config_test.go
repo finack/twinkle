@@ -46,6 +46,9 @@ leds:
 	if c.Locale != "America/Los_Angeles" {
 		t.Errorf("Locale: got %q, want America/Los_Angeles", c.Locale)
 	}
+	if c.WindLowKt != 0 {
+		t.Errorf("WindLowKt: got %v, want 0 (omitted from yaml)", c.WindLowKt)
+	}
 	if len(c.Leds) != 3 {
 		t.Errorf("Leds count: got %d, want 3", len(c.Leds))
 	}

@@ -7,6 +7,8 @@ led_refresh_rate_ms: 200
 latitude: 37.9884
 longitude: -122.0578
 locale: America/Los_Angeles
+wind_low_kt: 10
+wind_high_kt: 25
 leds:
   0: KUKI
   2: KSTS

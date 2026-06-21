@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"image/color"
 	"io"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,6 +107,54 @@ func flightCategoryToColor(category string) color.RGBA {
 	}
 }
 
+// windyColorFor returns the "windy" hue-shifted variant of a flight category color.
+func windyColorFor(category string) color.RGBA {
+	switch strings.ToUpper(category) {
+	case "VFR":
+		return colornames.Yellowgreen
+	case "MVFR":
+		return colornames.Steelblue
+	case "IFR":
+		return colornames.Orangered
+	case "LIFR":
+		return colornames.Deeppink
+	default:
+		return colornames.Grey
+	}
+}
+
+// blendColors linearly interpolates between a and b; t is clamped to [0, 1].
+func blendColors(a, b color.RGBA, t float64) color.RGBA {
+	if t <= 0 {
+		return a
+	}
+	if t >= 1 {
+		return b
+	}
+	lerp := func(x, y uint8) uint8 {
+		return uint8(float64(x) + t*(float64(y)-float64(x)))
+	}
+	return color.RGBA{
+		R: lerp(a.R, b.R),
+		G: lerp(a.G, b.G),
+		B: lerp(a.B, b.B),
+		A: 0xff,
+	}
+}
+
+// windAdjustedColor shifts the base color toward the windy variant as effectiveWindKt
+// rises from lowKt to highKt, then fades toward white beyond highKt (capped at 40%).
+func windAdjustedColor(base, windy color.RGBA, effectiveWindKt, lowKt, highKt float64) color.RGBA {
+	if effectiveWindKt < lowKt {
+		return base
+	}
+	if effectiveWindKt < highKt {
+		return blendColors(base, windy, (effectiveWindKt-lowKt)/(highKt-lowKt))
+	}
+	whiteFraction := math.Min((effectiveWindKt-highKt)/15.0, 0.4)
+	return blendColors(windy, color.RGBA{R: 255, G: 255, B: 255, A: 255}, whiteFraction)
+}
+
 func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 	metars, err := getMetars(c.Leds)
 	if err != nil {
@@ -121,7 +171,20 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 			continue
 		}
 
-		leds <- display.Pixel{Num: ledNum, Color: flightCategoryToColor(metar.FlightCategory)}
+		windKt, _ := strconv.ParseFloat(metar.WindSpeedKt, 64)
+		gustKt, _ := strconv.ParseFloat(metar.WindGustKt, 64)
+		effectiveKt := math.Max(windKt, gustKt)
+
+		log.Debug().
+			Str("station", metar.StationID).
+			Float64("windKt", windKt).
+			Float64("gustKt", gustKt).
+			Msg("Wind")
+
+		base := flightCategoryToColor(metar.FlightCategory)
+		windy := windyColorFor(metar.FlightCategory)
+		col := windAdjustedColor(base, windy, effectiveKt, c.WindLowKt, c.WindHighKt)
+		leds <- display.Pixel{Num: ledNum, Color: col}
 	}
 }
 

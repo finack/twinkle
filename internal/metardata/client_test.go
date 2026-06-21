@@ -104,6 +104,85 @@ func TestFlightCategoryToColor(t *testing.T) {
 	}
 }
 
+// blendColors and windAdjustedColor tests
+
+func TestBlendColors(t *testing.T) {
+	white := color.RGBA{255, 255, 255, 255}
+	black := color.RGBA{0, 0, 0, 255}
+
+	tests := []struct {
+		t    float64
+		want color.RGBA
+	}{
+		{0.0, black},
+		{1.0, white},
+		{0.5, color.RGBA{127, 127, 127, 255}},
+		{-1.0, black}, // clamped below 0
+		{2.0, white},  // clamped above 1
+	}
+	for _, tt := range tests {
+		got := blendColors(black, white, tt.t)
+		if got.R != tt.want.R || got.G != tt.want.G || got.B != tt.want.B {
+			t.Errorf("blendColors(black, white, %v) = %v, want %v", tt.t, got, tt.want)
+		}
+	}
+}
+
+func TestWindAdjustedColor(t *testing.T) {
+	base := colornames.Limegreen    // VFR calm
+	windy := colornames.Yellowgreen // VFR windy
+	white := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	low, high := 10.0, 25.0
+
+	tests := []struct {
+		name      string
+		effectKt  float64
+		wantColor color.RGBA
+		tolerance int
+	}{
+		{"calm", 0, base, 0},
+		{"at low threshold", 10, base, 0},
+		{"just above low", 10.1, blendColors(base, windy, 0.1/15), 2},
+		{"midpoint", 17.5, blendColors(base, windy, 0.5), 2},
+		{"at high threshold", 25, windy, 2},
+		{"above high, white blend", 40, blendColors(windy, white, 0.4), 2},
+		{"well above high, capped", 100, blendColors(windy, white, 0.4), 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := windAdjustedColor(base, windy, tt.effectKt, low, high)
+			diff := func(a, b uint8) int {
+				if a > b {
+					return int(a - b)
+				}
+				return int(b - a)
+			}
+			if diff(got.R, tt.wantColor.R) > tt.tolerance ||
+				diff(got.G, tt.wantColor.G) > tt.tolerance ||
+				diff(got.B, tt.wantColor.B) > tt.tolerance {
+				t.Errorf("windAdjustedColor at %.1f kt: got %v, want %v (±%d)",
+					tt.effectKt, got, tt.wantColor, tt.tolerance)
+			}
+		})
+	}
+}
+
+func TestWindAdjustedColor_GustDrives(t *testing.T) {
+	// In doFetchRoutine, effectiveKt = max(windKt, gustKt).
+	// Verify that a high gust (above low threshold) shifts the color
+	// even when sustained wind is calm.
+	base := colornames.Limegreen
+	windy := colornames.Yellowgreen
+	low, high := 10.0, 25.0
+
+	calm := windAdjustedColor(base, windy, 0, low, high)
+	gusty := windAdjustedColor(base, windy, 20, low, high)
+
+	if calm == gusty {
+		t.Error("gust-driven color should differ from calm color")
+	}
+}
+
 // fetchMetars tests using httptest
 
 func TestFetchMetars_Success(t *testing.T) {

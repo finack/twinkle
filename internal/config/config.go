@@ -19,6 +19,8 @@ type Config struct {
 	Latitude          float64 `yaml:"latitude,omitempty"`
 	Longitude         float64 `yaml:"longitude,omitempty"`
 	Locale            string  `yaml:"locale,omitempty"`
+	WindLowKt         float64 `yaml:"wind_low_kt,omitempty"`
+	WindHighKt        float64 `yaml:"wind_high_kt,omitempty"`
 }
 
 func GetConfig(file *string) Config {
