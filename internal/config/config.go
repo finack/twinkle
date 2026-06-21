@@ -13,6 +13,7 @@ type Config struct {
 	Stations          map[string]int
 	LedCount          int     `yaml:"led_count,omitempty"`
 	Brightness        int     `yaml:"brightness,omitempty"`
+	NightBrightness   int     `yaml:"night_brightness,omitempty"`
 	MetarRefreshRateS int     `yaml:"metar_refresh_rate_s,omitempty"` // seconds
 	LedRefreshRateMS  int     `yaml:"led_refresh_rate_ms,omitempty"`  // milliseconds
 	Latitude          float64 `yaml:"latitude,omitempty"`

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/finack/twinkle/internal/config"
-	ws2811 "github.com/rpi-ws281x/rpi-ws281x-go"
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,43 +27,13 @@ type Pixel struct {
 	Color color.RGBA
 }
 
-func New(brightness int, ledcount int) (*Leds, error) {
-	opt := ws2811.DefaultOptions
-	opt.Channels[0].Brightness = brightness
-	opt.Channels[0].LedCount = ledcount
-	opt.Channels[0].StripeType = ws2811.WS2811StripRGB
-	opt.Channels[0].GpioPin = 12
-
-	dev, err := ws2811.MakeWS2811(&opt)
-	if err != nil {
-		log.
-			Fatal().
-			Err(err).
-			Caller().
-			Msg("Could not configure LEDS")
-	}
-
-	err = dev.Init()
-	if err != nil {
-		log.
-			Fatal().
-			Err(err).
-			Caller().
-			Msg("Could not init LEDS")
-	}
-
-	leds := &Leds{Ws: dev}
-
-	leds.Clear()
-
-	return leds, nil
+func newWithEngine(ws wsEngine) *Leds {
+	return &Leds{Ws: ws}
 }
 
-func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel, chan int) {
+func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 	done := make(chan bool)
 	refresh := make(chan bool)
-	setBrightness := make(chan int)
-
 	ledChannel := make(chan Pixel)
 
 	go func() {
@@ -83,6 +52,9 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel, chan int)
 		ledRefreshRate := time.NewTicker(time.Duration(c.LedRefreshRateMS) * time.Millisecond)
 		defer ledRefreshRate.Stop()
 
+		brightnessRefresh := time.NewTicker(10 * time.Second)
+		defer brightnessRefresh.Stop()
+
 		for {
 			select {
 			case <-done:
@@ -92,19 +64,26 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel, chan int)
 			case m := <-ledChannel:
 				if display[m.Num] != m.Color {
 					buffer = append(buffer, m)
-					// log.Printf("setting led[%v][%#v]", m.Num, m.Color)
 				}
 			case <-refresh:
 				for n, c := range display {
 					leds.Display(n, c)
-
 					if err := leds.Ws.Render(); err != nil {
 						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
 						continue
 					}
 				}
-			case brightness := <-setBrightness:
-				leds.Ws.SetBrightness(0, brightness)
+			case <-brightnessRefresh.C:
+				now, rise, set, err := calcRiseSet(c.Longitude, c.Latitude, c.Locale)
+				if err != nil {
+					continue
+				}
+				b := calcBrightness(now, rise, set, c.Brightness, c.NightBrightness)
+				leds.Ws.SetBrightness(0, b)
+				if err := leds.Ws.Render(); err != nil {
+					log.Error().Err(err).Caller().Msg("Issue rendering brightness change")
+				}
+				log.Debug().Int("brightness", b).Msg("Updated brightness")
 			case <-ledRefreshRate.C:
 				if len(buffer) <= 0 {
 					continue
@@ -126,7 +105,7 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel, chan int)
 		}
 	}()
 
-	return done, refresh, ledChannel, setBrightness
+	return done, refresh, ledChannel
 }
 
 func (l *Leds) Clear() error {

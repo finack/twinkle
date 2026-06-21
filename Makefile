@@ -1,6 +1,9 @@
-.PHONY: build clean start stop enable disable run setup
+.PHONY: build clean start stop enable disable run setup test
 
 BUILD_PLATFORM=arm32v6
+
+test:
+	go test ./internal/...
 
 build:
 	go build -o ./build/twinkle ./cmd/server/main.go

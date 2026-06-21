@@ -15,7 +15,6 @@ import (
 )
 
 func main() {
-
 	debug := flag.Bool("debug", false, "Sets log level to debug")
 	configFile := flag.String("config", "config.yaml", "Path to configuration file")
 
@@ -39,13 +38,10 @@ func main() {
 		Msg("Starting Twinkle!")
 
 	stopApplication := make(chan bool)
-	stopLedUpdate, _, ledChannel, _ := display.UpdateRoutine(c)
-	// stopLedUpdate, _, ledChannel, brightness := display.UpdateRoutine(c)
+	stopLedUpdate, _, ledChannel := display.UpdateRoutine(c)
 	stopMetarUpdate := metardata.FetchRoutine(c, ledChannel)
-	// stopAutomaticDimmer := display.AutomaticDimmer(c, brightness)
 
 	signals.CatchSignals(stopMetarUpdate, stopLedUpdate, stopApplication)
-	// signals.CatchSignals(stopMetarUpdate, stopLedUpdate, stopApplication, stopAutomaticDimmer)
 
 	<-stopApplication
 }

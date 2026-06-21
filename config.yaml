@@ -1,6 +1,7 @@
 ---
 led_count: 50
 brightness: 200
+night_brightness: 50
 metar_refresh_rate_s: 500
 led_refresh_rate_ms: 200
 latitude: 37.9884

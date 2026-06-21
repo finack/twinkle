@@ -17,6 +17,8 @@ import (
 	"golang.org/x/image/colornames"
 )
 
+var httpClient = &http.Client{}
+
 // https://www.aviationweather.gov/dataserver/fields?datatype=metar
 type Metar struct {
 	RawText                   string `csv:"raw_text"`              // The raw METAR
@@ -86,6 +88,24 @@ func FetchRoutine(c config.Config, leds chan display.Pixel) chan bool {
 	return done
 }
 
+func flightCategoryToColor(category string) color.RGBA {
+	switch strings.ToUpper(category) {
+	case "VFR":
+		return colornames.Limegreen
+	case "MVFR":
+		return colornames.Blue
+	case "IFR":
+		return colornames.Red
+	case "LIFR":
+		return colornames.Mediumvioletred
+	case "":
+		return colornames.Grey
+	default:
+		log.Warn().Str("flightCategory", category).Msg("Unknown flightCategory")
+		return colornames.Antiquewhite
+	}
+}
+
 func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 	metars, err := getMetars(c.Leds)
 	if err != nil {
@@ -103,53 +123,26 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 			continue
 		}
 
-		var color color.RGBA
-		flightCategory := strings.ToUpper(metar.FlightCategory)
-		switch flightCategory {
-		case "VFR":
-			color = colornames.Limegreen
-		case "MVFR":
-			color = colornames.Blue
-		case "IFR":
-			color = colornames.Red
-		case "LIFR":
-			color = colornames.Mediumvioletred
-		case "":
-			color = colornames.Grey
-		default:
-			log.Warn().Str("flightCategory", metar.FlightCategory).Msg("Unknown flightCategory")
-			color = colornames.Antiquewhite
-		}
-		leds <- display.Pixel{Num: ledNum, Color: color}
+		leds <- display.Pixel{Num: ledNum, Color: flightCategoryToColor(metar.FlightCategory)}
 	}
-	return
 }
 
-func getMetars(s map[int]string) (*[]Metar, error) {
-	data, err := fetchMetars(s)
-	if err != nil {
-		return nil, err
-	}
+func parseMetarCSV(data []byte) (*[]Metar, error) {
 	lines := strings.Split(string(data), "\n")
 	var csvData strings.Builder
 
 	foundHeader := false
 	for _, line := range lines {
-		if strings.HasPrefix(line, "raw_text") == true {
+		if strings.HasPrefix(line, "raw_text") {
 			foundHeader = true
 		}
-
-		if foundHeader == true {
-			line += "\n"
-			csvData.WriteString(line)
-		} else {
-			continue
+		if foundHeader {
+			csvData.WriteString(line + "\n")
 		}
 	}
 
 	stations := []Metar{}
-
-	err = gocsv.UnmarshalString(csvData.String(), &stations)
+	err := gocsv.UnmarshalString(csvData.String(), &stations)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not unmarshal CSV")
 		log.Error().Str("body", csvData.String()).Msg("CSV Data")
@@ -159,18 +152,28 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 	return &stations, nil
 }
 
+func getMetars(s map[int]string) (*[]Metar, error) {
+	data, err := fetchMetars(s)
+	if err != nil {
+		return nil, err
+	}
+	return parseMetarCSV(data)
+}
+
+var metarBaseURL = "https://www.aviationweather.gov/api/data/dataserver"
+
 func fetchMetars(s map[int]string) ([]byte, error) {
 	stations := make([]string, 0)
 	for _, station := range s {
 		stations = append(stations, station)
 	}
 
-	url := "https://www.aviationweather.gov/api/data/dataserver?dataSource=metars&requestType=retrieve&format=csv"
+	url := metarBaseURL + "?dataSource=metars&requestType=retrieve&format=csv"
 	url += "&mostRecentForEachStation=true&hoursBeforeNow=4"
 	url += "&stationString="
 	url += strings.Join(stations, ",")
 
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		log.Error().Err(err).Str("url", url).Msg("Unable to fetch Metar")
 		return nil, err
