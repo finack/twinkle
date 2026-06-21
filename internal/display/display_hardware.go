@@ -3,8 +3,9 @@
 package display
 
 import (
+	"fmt"
+
 	ws2811 "github.com/rpi-ws281x/rpi-ws281x-go"
-	"github.com/rs/zerolog/log"
 )
 
 func New(brightness int, ledcount int) (*Leds, error) {
@@ -16,16 +17,14 @@ func New(brightness int, ledcount int) (*Leds, error) {
 
 	dev, err := ws2811.MakeWS2811(&opt)
 	if err != nil {
-		log.Fatal().Err(err).Caller().Msg("Could not configure LEDS")
+		return nil, fmt.Errorf("configure LEDs: %w", err)
 	}
 
-	err = dev.Init()
-	if err != nil {
-		log.Fatal().Err(err).Caller().Msg("Could not init LEDS")
+	if err = dev.Init(); err != nil {
+		return nil, fmt.Errorf("init LEDs: %w", err)
 	}
 
 	leds := newWithEngine(dev)
 	leds.Clear()
-
 	return leds, nil
 }

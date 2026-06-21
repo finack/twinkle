@@ -8,15 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func calcRiseSet(long, lat float64, locale string) (t time.Time, rise time.Time, set time.Time, err error) {
-	location, err := time.LoadLocation(locale)
-	if err != nil {
-		log.Error().Err(err).Caller().Msg("Could not lookup location")
-		return
-	}
-
-	t = time.Now().In(location)
-	rise, set = sunrise.SunriseSunset(lat, long, t.Year(), t.Month(), t.Day())
+func calcRiseSet(now time.Time, long, lat float64) (rise time.Time, set time.Time, err error) {
+	rise, set = sunrise.SunriseSunset(lat, long, now.Year(), now.Month(), now.Day())
 
 	empty := time.Time{}
 	if rise == empty || set == empty {
@@ -25,8 +18,8 @@ func calcRiseSet(long, lat float64, locale string) (t time.Time, rise time.Time,
 		return
 	}
 
-	rise = rise.In(location)
-	set = set.In(location)
+	rise = rise.In(now.Location())
+	set = set.In(now.Location())
 
 	log.Debug().Time("sunrise", rise).Time("sunset", set).Msg("Sunrise & Sunset info")
 	return
@@ -37,18 +30,21 @@ func calcRiseSet(long, lat float64, locale string) (t time.Time, rise time.Time,
 func calcBrightness(now, rise, set time.Time, dayBrightness, nightBrightness int) int {
 	const window = 30 * time.Minute
 
+	riseStart := rise.Add(-window)
+	riseEnd := rise.Add(window)
+	setStart := set.Add(-window)
+	setEnd := set.Add(window)
+
 	switch {
-	case now.Before(rise.Add(-window)):
+	case now.Before(riseStart):
 		return nightBrightness
-	case now.Before(rise.Add(window)):
-		elapsed := now.Sub(rise.Add(-window))
-		fraction := float64(elapsed) / float64(2*window)
+	case now.Before(riseEnd):
+		fraction := float64(now.Sub(riseStart)) / float64(2*window)
 		return nightBrightness + int(float64(dayBrightness-nightBrightness)*fraction)
-	case now.Before(set.Add(-window)):
+	case now.Before(setStart):
 		return dayBrightness
-	case now.Before(set.Add(window)):
-		elapsed := now.Sub(set.Add(-window))
-		fraction := float64(elapsed) / float64(2*window)
+	case now.Before(setEnd):
+		fraction := float64(now.Sub(setStart)) / float64(2*window)
 		return dayBrightness - int(float64(dayBrightness-nightBrightness)*fraction)
 	default:
 		return nightBrightness

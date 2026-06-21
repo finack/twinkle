@@ -27,9 +27,12 @@ make deps-upgrade
 # Build for local platform (only useful on Linux/Pi with rpi_ws281x installed)
 make build
 
-# Cross-compile for Raspberry Pi (requires Docker buildx)
-make docker-setup   # one-time setup
-make docker-build   # produces build/twinkle-armarm32v6
+# Deploy to the Pi (rsyncs source, builds natively on Pi, restarts service)
+make deploy         # requires Go at /usr/local/go/bin/go and rpi_ws281x on the Pi
+
+# Cross-compile reference (not used by deploy; kept as a fallback)
+make docker-setup   # build the Docker builder image once
+make docker-build   # produces build/twinkle-arm via Docker cross-compile
 
 # Deploy and run via systemd on the Pi
 make setup          # copies binary + config + service file to /home/twinkle
@@ -39,18 +42,15 @@ make start / stop / status
 
 ## Architecture
 
-Three goroutines communicate over channels, started in `cmd/server/main.go`:
+Two goroutines communicate over a channel, started in `cmd/server/main.go`:
 
 ```
 FetchRoutine  →  ledChannel (chan Pixel)  →  UpdateRoutine  →  WS2811 hardware
-                                                 ↑
-AutomaticDimmer  →  setBrightness (chan int) ─────┘
 ```
 
 - **`internal/metardata`** — fetches METAR CSV from `aviationweather.gov` every N seconds, maps `FlightCategory` to a color, and sends `display.Pixel{Num, Color}` values onto `ledChannel`.
-- **`internal/display`** — buffers incoming `Pixel` updates and renders them to the LED strip on a timer tick. `UpdateRoutine` owns the hardware lifecycle.
+- **`internal/display`** — buffers incoming `Pixel` updates and renders them to the LED strip on a timer tick. `UpdateRoutine` owns the hardware lifecycle and runs a brightness ticker (10s) that adjusts LED brightness based on sunrise/sunset via `calcBrightness`. Sunrise/sunset is recomputed at most once per calendar day.
 - **`internal/config`** — parses `config.yaml`; builds both the `Leds map[int]string` (LED index → station) and the reverse `Stations map[string]int` (station → LED index).
-- **`internal/display/brightness.go`** — `AutomaticDimmer` adjusts brightness via `setBrightness` channel based on sunrise/sunset.
 - **`internal/signals`** — catches SIGINT/SIGTERM and sends stop signals to all goroutines for a clean shutdown.
 
 ## Build constraints and hardware dependency
@@ -62,9 +62,6 @@ AutomaticDimmer  →  setBrightness (chan int) ─────┘
 
 This lets the package compile and be tested on macOS. The Docker build in `docker/app-builder/Dockerfile` compiles the C library and cross-compiles the Go binary for ARM.
 
-## Known bug
-
-`brightness.go:68` reads `set = rise.In(location)` but should be `set = set.In(location)`. This makes sunset always equal sunrise, so `AutomaticDimmer` never correctly detects after-sunset. `TestCalcRiseSet_ValidLocale` in `internal/display/brightness_test.go` intentionally fails to document this.
 
 ## Testing approach
 

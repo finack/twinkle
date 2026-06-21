@@ -35,24 +35,40 @@ func UpdateRoutine(c config.Config) (chan bool, chan Pixel) {
 	done := make(chan bool)
 	ledChannel := make(chan Pixel)
 
+	loc, err := time.LoadLocation(c.Locale)
+	if err != nil {
+		log.Fatal().Err(err).Str("locale", c.Locale).Caller().Msg("Could not load timezone")
+	}
+
+	// Extract only the scalars needed so the goroutine closure doesn't retain
+	// the Leds/Stations maps for the process lifetime.
+	ledCount := c.LedCount
+	ledRefreshRateMS := c.LedRefreshRateMS
+	brightness := c.Brightness
+	nightBrightness := c.NightBrightness
+	latitude := c.Latitude
+	longitude := c.Longitude
+
 	go func() {
-		display := make([]color.RGBA, c.LedCount)
+		display := make([]color.RGBA, ledCount)
 		var buffer []Pixel
 
-		leds, err := New(c.Brightness, c.LedCount)
+		leds, err := New(brightness, ledCount)
 		if err != nil {
-			log.
-				Fatal().
-				Err(err).
-				Caller().
-				Msg("Could not start connection to LEDS")
+			log.Fatal().Err(err).Caller().Msg("Could not start connection to LEDS")
 		}
 
-		ledRefreshRate := time.NewTicker(time.Duration(c.LedRefreshRateMS) * time.Millisecond)
+		ledRefreshRate := time.NewTicker(time.Duration(ledRefreshRateMS) * time.Millisecond)
 		defer ledRefreshRate.Stop()
 
 		brightnessRefresh := time.NewTicker(10 * time.Second)
 		defer brightnessRefresh.Stop()
+
+		var (
+			riseSetDate time.Time
+			cachedRise  time.Time
+			cachedSet   time.Time
+		)
 
 		for {
 			select {
@@ -65,11 +81,16 @@ func UpdateRoutine(c config.Config) (chan bool, chan Pixel) {
 					buffer = append(buffer, m)
 				}
 			case <-brightnessRefresh.C:
-				now, rise, set, err := calcRiseSet(c.Longitude, c.Latitude, c.Locale)
-				if err != nil {
-					continue
+				now := time.Now().In(loc)
+				today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+				if !today.Equal(riseSetDate) {
+					cachedRise, cachedSet, err = calcRiseSet(now, longitude, latitude)
+					if err != nil {
+						continue
+					}
+					riseSetDate = today
 				}
-				b := calcBrightness(now, rise, set, c.Brightness, c.NightBrightness)
+				b := calcBrightness(now, cachedRise, cachedSet, brightness, nightBrightness)
 				leds.Ws.SetBrightness(0, b)
 				if err := leds.Ws.Render(); err != nil {
 					log.Error().Err(err).Caller().Msg("Issue rendering brightness change")
@@ -84,12 +105,10 @@ func UpdateRoutine(c config.Config) (chan bool, chan Pixel) {
 				for _, p := range buffer {
 					leds.Display(p.Num, p.Color)
 					display[p.Num] = p.Color
-
-					if err := leds.Ws.Render(); err != nil {
-						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
-					}
 				}
-
+				if err := leds.Ws.Render(); err != nil {
+					log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
+				}
 				buffer = nil
 			}
 		}

@@ -126,27 +126,18 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 }
 
 func parseMetarCSV(data []byte) (*[]Metar, error) {
-	lines := strings.Split(string(data), "\n")
-	var csvData strings.Builder
-
-	foundHeader := false
-	for _, line := range lines {
-		if strings.HasPrefix(line, "raw_text") {
-			foundHeader = true
-		}
-		if foundHeader {
-			csvData.WriteString(line + "\n")
-		}
+	s := string(data)
+	idx := strings.Index(s, "raw_text")
+	if idx == -1 {
+		return nil, fmt.Errorf("no CSV header found in METAR response")
 	}
 
 	stations := []Metar{}
-	err := gocsv.UnmarshalString(csvData.String(), &stations)
-	if err != nil {
+	if err := gocsv.UnmarshalString(s[idx:], &stations); err != nil {
 		log.Error().Err(err).Msg("Could not unmarshal CSV")
-		log.Error().Str("body", csvData.String()).Msg("CSV Data")
+		log.Error().Str("body", s[idx:]).Msg("CSV Data")
 		return nil, err
 	}
-
 	return &stations, nil
 }
 

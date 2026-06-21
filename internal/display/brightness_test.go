@@ -5,17 +5,16 @@ import (
 	"time"
 )
 
-func TestCalcRiseSet_ValidLocale(t *testing.T) {
-	// Bay Area coordinates, America/Los_Angeles timezone
-	now, rise, set, err := calcRiseSet(-122.0578, 37.9884, "America/Los_Angeles")
+func TestCalcRiseSet(t *testing.T) {
+	loc, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().In(loc)
+
+	rise, set, err := calcRiseSet(now, -122.0578, 37.9884)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	loc, _ := time.LoadLocation("America/Los_Angeles")
-
-	if now.Location().String() != loc.String() {
-		t.Errorf("now timezone: got %q, want %q", now.Location(), loc)
 	}
 
 	zero := time.Time{}
@@ -25,24 +24,14 @@ func TestCalcRiseSet_ValidLocale(t *testing.T) {
 	if set == zero {
 		t.Error("set is zero time")
 	}
-
 	if !rise.Before(set) {
 		t.Errorf("expected rise (%v) to be before set (%v)", rise, set)
 	}
-
-	// Sanity-check: sunrise should be in the morning, sunset in the evening.
 	if rise.Hour() >= 12 {
 		t.Errorf("sunrise hour %d looks wrong (expected AM)", rise.Hour())
 	}
 	if set.Hour() < 12 {
 		t.Errorf("sunset hour %d looks wrong (expected PM)", set.Hour())
-	}
-}
-
-func TestCalcRiseSet_InvalidLocale(t *testing.T) {
-	_, _, _, err := calcRiseSet(-122.0578, 37.9884, "Not/APlace")
-	if err == nil {
-		t.Error("expected error for invalid locale, got nil")
 	}
 }
 
