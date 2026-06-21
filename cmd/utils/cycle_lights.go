@@ -1,25 +1,25 @@
-package main 
+package main
 
 import (
-	"os"
-	"fmt"
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/finack/twinkle/internal/config"
 	"github.com/finack/twinkle/internal/display"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/image/colornames"
-  "github.com/rs/zerolog"
-  "github.com/rs/zerolog/log"
 )
 
 func main() {
-  configFile := flag.String("config", "config.yaml", "Path to configuration file")
+	configFile := flag.String("config", "config.yaml", "Path to configuration file")
 
-  flag.Parse()
+	flag.Parse()
 
-  c := config.GetConfig(configFile)
-  log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	c := config.GetConfig(configFile)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	leds, err := display.New(c.Brightness, c.LedCount)
 	if err != nil {
@@ -41,6 +41,5 @@ func main() {
 		var input string
 		fmt.Scanln(&input)
 	}
-  leds.Clear()
+	leds.Clear()
 }
-

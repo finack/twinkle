@@ -31,9 +31,8 @@ func newWithEngine(ws wsEngine) *Leds {
 	return &Leds{Ws: ws}
 }
 
-func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
+func UpdateRoutine(c config.Config) (chan bool, chan Pixel) {
 	done := make(chan bool)
-	refresh := make(chan bool)
 	ledChannel := make(chan Pixel)
 
 	go func() {
@@ -65,14 +64,6 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 				if display[m.Num] != m.Color {
 					buffer = append(buffer, m)
 				}
-			case <-refresh:
-				for n, c := range display {
-					leds.Display(n, c)
-					if err := leds.Ws.Render(); err != nil {
-						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
-						continue
-					}
-				}
 			case <-brightnessRefresh.C:
 				now, rise, set, err := calcRiseSet(c.Longitude, c.Latitude, c.Locale)
 				if err != nil {
@@ -85,7 +76,7 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 				}
 				log.Debug().Int("brightness", b).Msg("Updated brightness")
 			case <-ledRefreshRate.C:
-				if len(buffer) <= 0 {
+				if len(buffer) == 0 {
 					continue
 				}
 
@@ -94,8 +85,7 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 					leds.Display(p.Num, p.Color)
 					display[p.Num] = p.Color
 
-					err = leds.Ws.Render()
-					if err != nil {
+					if err := leds.Ws.Render(); err != nil {
 						log.Error().Err(err).Caller().Msg("Issue rendering to LEDS")
 					}
 				}
@@ -105,7 +95,7 @@ func UpdateRoutine(c config.Config) (chan bool, chan bool, chan Pixel) {
 		}
 	}()
 
-	return done, refresh, ledChannel
+	return done, ledChannel
 }
 
 func (l *Leds) Clear() error {
@@ -123,15 +113,15 @@ func (l *Leds) Display(num int, c color.RGBA) {
 }
 
 func ParseRGBAtoUint32(c color.RGBA) uint32 {
-	return (((uint32(c.R) & 0x0FF) << 16) | ((uint32(c.G) & 0x0ff) << 8) | (uint32(c.B) & 0x0ff))
+	return uint32(c.R)<<16 | uint32(c.G)<<8 | uint32(c.B)
 }
 
 // From https://stackoverflow.com/questions/54197913/parse-hex-string-to-image-color
 func ParseHexColor(s string) (c color.RGBA, err error) {
-	errInvalidFormat := errors.New("Image is not a valid format")
+	errInvalidFormat := errors.New("image is not a valid format")
 	c.A = 0xff
 
-	if s[0] != '#' {
+	if len(s) == 0 || s[0] != '#' {
 		return c, errInvalidFormat
 	}
 

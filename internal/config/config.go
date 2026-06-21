@@ -34,13 +34,13 @@ func GetConfig(file *string) Config {
 			Msg("Could not read config file")
 	}
 
-	err = yaml.Unmarshal([]byte(data), &c)
+	err = yaml.Unmarshal(data, &c)
 	if err != nil {
 		log.
 			Fatal().
 			Err(err).
 			Caller().
-			Msg("Cound not unmarshal configuration file")
+			Msg("Could not unmarshal configuration file")
 	}
 
 	c.Stations = reverseLeds(c.Leds)

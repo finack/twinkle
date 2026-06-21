@@ -1,9 +1,18 @@
-.PHONY: build clean start stop enable disable run setup test
+.PHONY: build clean start stop enable disable run setup test lint deps-upgrade
 
 BUILD_PLATFORM=arm32v6
 
 test:
 	go test ./internal/...
+
+lint:
+	go vet ./...
+	gofmt -l .
+	staticcheck ./...
+
+deps-upgrade:
+	go get -u ./...
+	go mod tidy
 
 build:
 	go build -o ./build/twinkle ./cmd/server/main.go

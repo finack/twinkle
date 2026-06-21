@@ -17,7 +17,6 @@ func CatchSignals(stopMetarClient chan bool, stopLedUpdate chan bool, stopApplic
 	go func() {
 		sig := <-sigs
 		log.Info().Str("signal", fmt.Sprintf("%v", sig)).Msg("Shutting down Twinkle!")
-		// stopAutomaticDimmer <- true
 		signal.Stop(sigs)
 		stopLedUpdate <- true
 		stopMetarClient <- true

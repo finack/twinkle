@@ -1,7 +1,6 @@
 package metardata
 
 import (
-	"errors"
 	"fmt"
 	"image/color"
 	"io"
@@ -29,8 +28,8 @@ type Metar struct {
 	TempC                     string `csv:"temp_c"`                // Air temperature
 	DewpointC                 string `csv:"dewpoint_c"`            // Dewpoint temperature
 	WindDirDegrees            string `csv:"wind_dir_degrees"`      // Direction from which the wind is blowing.  0 degrees=variable wind direction.
-	windSpeedKt               string `csv:"wind_speed_kt"`         // Wind speed; 0 degree wdir and 0 wspd = calm winds
-	windGustKt                string `csv:"wind_gust_kt"`          // Wind gust
+	WindSpeedKt               string `csv:"wind_speed_kt"`         // Wind speed; 0 degree wdir and 0 wspd = calm winds
+	WindGustKt                string `csv:"wind_gust_kt"`          // Wind gust
 	VisibilityStatuteMi       string `csv:"visibility_statute_mi"` // Horizontal visibility
 	AltimInHg                 string `csv:"altim_in_hg"`           // Altimeter
 	SeaLevelPressureMb        string `csv:"sea_level_pressure_mb"` // Sea-level pressure
@@ -116,9 +115,8 @@ func doFetchRoutine(c config.Config, leds chan display.Pixel) {
 	log.Info().Int("count", len(*metars)).Msg("Fetched Metars")
 
 	for _, metar := range *metars {
-		var ledNum int = -1
-		ledNum = c.Stations[metar.StationID]
-		if ledNum < 0 {
+		ledNum, ok := c.Stations[metar.StationID]
+		if !ok {
 			log.Warn().Str("stationID", metar.StationID).Msg("Results included station not found in config")
 			continue
 		}
@@ -163,7 +161,7 @@ func getMetars(s map[int]string) (*[]Metar, error) {
 var metarBaseURL = "https://www.aviationweather.gov/api/data/dataserver"
 
 func fetchMetars(s map[int]string) ([]byte, error) {
-	stations := make([]string, 0)
+	var stations []string
 	for _, station := range s {
 		stations = append(stations, station)
 	}
@@ -181,7 +179,7 @@ func fetchMetars(s map[int]string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err := errors.New(fmt.Sprintf("HTTP expected %v got %v", http.StatusOK, resp.StatusCode))
+		err := fmt.Errorf("HTTP expected %v got %v", http.StatusOK, resp.StatusCode)
 		log.
 			Error().
 			Err(err).

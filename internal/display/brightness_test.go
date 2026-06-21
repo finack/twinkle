@@ -48,8 +48,8 @@ func TestCalcRiseSet_InvalidLocale(t *testing.T) {
 
 func TestCalcBrightness(t *testing.T) {
 	base := time.Date(2024, 6, 21, 0, 0, 0, 0, time.UTC)
-	rise := base.Add(6 * time.Hour)  // 06:00
-	set := base.Add(20 * time.Hour)  // 20:00
+	rise := base.Add(6 * time.Hour) // 06:00
+	set := base.Add(20 * time.Hour) // 20:00
 	day := 200
 	night := 50
 

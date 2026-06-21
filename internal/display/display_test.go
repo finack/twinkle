@@ -7,8 +7,8 @@ import (
 
 // mockWsEngine satisfies the wsEngine interface for tests.
 type mockWsEngine struct {
-	leds       []uint32
-	renderErr  error
+	leds        []uint32
+	renderErr   error
 	renderCalls int
 }
 
@@ -16,11 +16,11 @@ func newMock(size int) *mockWsEngine {
 	return &mockWsEngine{leds: make([]uint32, size)}
 }
 
-func (m *mockWsEngine) Init() error                         { return nil }
-func (m *mockWsEngine) Fini()                               {}
-func (m *mockWsEngine) Wait() error                         { return nil }
+func (m *mockWsEngine) Init() error                           { return nil }
+func (m *mockWsEngine) Fini()                                 {}
+func (m *mockWsEngine) Wait() error                           { return nil }
 func (m *mockWsEngine) SetBrightness(channel, brightness int) {}
-func (m *mockWsEngine) Leds(channel int) []uint32           { return m.leds }
+func (m *mockWsEngine) Leds(channel int) []uint32             { return m.leds }
 func (m *mockWsEngine) Render() error {
 	m.renderCalls++
 	return m.renderErr
@@ -138,5 +138,16 @@ func TestLedsClear(t *testing.T) {
 		if v != 0 {
 			t.Errorf("leds[%d] = %#x after Clear, want 0", i, v)
 		}
+	}
+
+	if mock.renderCalls != len(mock.leds) {
+		t.Errorf("Render called %d times, want %d (once per LED)", mock.renderCalls, len(mock.leds))
+	}
+}
+
+func TestParseHexColor_Empty(t *testing.T) {
+	_, err := ParseHexColor("")
+	if err == nil {
+		t.Error("expected error for empty string, got nil")
 	}
 }

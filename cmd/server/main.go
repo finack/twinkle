@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/finack/twinkle/internal/config"
@@ -34,11 +33,11 @@ func main() {
 		Int("ledCount", c.LedCount).
 		Int("stationCount", len(c.Stations)).
 		Int("metarRefreshRateS", c.MetarRefreshRateS).
-		Str("logLevel", fmt.Sprintf("%v", zerolog.GlobalLevel())).
+		Str("logLevel", zerolog.GlobalLevel().String()).
 		Msg("Starting Twinkle!")
 
 	stopApplication := make(chan bool)
-	stopLedUpdate, _, ledChannel := display.UpdateRoutine(c)
+	stopLedUpdate, ledChannel := display.UpdateRoutine(c)
 	stopMetarUpdate := metardata.FetchRoutine(c, ledChannel)
 
 	signals.CatchSignals(stopMetarUpdate, stopLedUpdate, stopApplication)

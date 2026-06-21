@@ -18,8 +18,11 @@ go test ./internal/metardata/ -run TestParseMetarCSV
 # Run tests with verbose output
 go test -v ./internal/...
 
-# Vet
-go vet ./internal/...
+# Lint (vet + gofmt check + staticcheck); requires: go install honnef.co/go/tools/cmd/staticcheck@latest
+make lint
+
+# Upgrade all dependencies
+make deps-upgrade
 
 # Build for local platform (only useful on Linux/Pi with rpi_ws281x installed)
 make build
